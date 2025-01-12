@@ -7,10 +7,12 @@ def writeCSV(filename, lines):
 
 def readCSV(filename):
     lines = []
-    with open(filename, "rb") as f:
+    with open(filename, mode='r') as f:
         csvreader = csv.reader(f)
         for line in csvreader:
-            lines.append(line)
+            if line:
+                # print(line)
+                lines.append(line)
     return lines
 
 def tryFloat(value):

@@ -9,6 +9,8 @@ from layers import iou
 from scipy.ndimage import zoom
 import warnings
 from scipy.ndimage.interpolation import rotate
+from collections.abc import Iterable
+
 
 class DataBowl3Detector(Dataset):
     def __init__(self, data_dir, split_path, config, phase='train', split_comber=None):
@@ -36,10 +38,10 @@ class DataBowl3Detector(Dataset):
         
         labels = []
         
-        print len(idcs)
+        print(len(idcs))
         for idx in idcs:
             # print data_dir, idx
-            l = np.load(data_dir+idx+'_label.npy')
+            l = np.load(data_dir+idx+'_label.npy', allow_pickle=True)
             # print l, os.path.join(data_dir, '%s_label.npy' %idx)
             if np.all(l==0):
                 l=np.array([])
@@ -111,9 +113,9 @@ class DataBowl3Detector(Dataset):
             pw = int(np.ceil(float(nw) / self.stride)) * self.stride
             imgs = np.pad(imgs, [[0,0],[0, pz - nz], [0, ph - nh], [0, pw - nw]], 'constant',constant_values = self.pad_value)
             
-            xx,yy,zz = np.meshgrid(np.linspace(-0.5,0.5,imgs.shape[1]/self.stride),
-                                   np.linspace(-0.5,0.5,imgs.shape[2]/self.stride),
-                                   np.linspace(-0.5,0.5,imgs.shape[3]/self.stride),indexing ='ij')
+            xx,yy,zz = np.meshgrid(np.linspace(-0.5,0.5,int(imgs.shape[1]/self.stride)),
+                                   np.linspace(-0.5,0.5,int(imgs.shape[2]/self.stride)),
+                                   np.linspace(-0.5,0.5,int(imgs.shape[3]/self.stride)),indexing ='ij')
             coord = np.concatenate([xx[np.newaxis,...], yy[np.newaxis,...],zz[np.newaxis,:]],0).astype('float32')
             imgs, nzhw = self.split_comber.split(imgs)
             coord2, nzhw2 = self.split_comber.split(coord,
@@ -126,7 +128,7 @@ class DataBowl3Detector(Dataset):
 
     def __len__(self):
         if self.phase == 'train':
-            return len(self.bboxes)/(1-self.r_rand)
+            return int(len(self.bboxes)/(1-self.r_rand))
         elif self.phase =='val':
             return len(self.bboxes)
         else:
@@ -212,9 +214,10 @@ class Crop(object):
                 
         normstart = np.array(start).astype('float32')/np.array(imgs.shape[1:])-0.5
         normsize = np.array(crop_size).astype('float32')/np.array(imgs.shape[1:])
-        xx,yy,zz = np.meshgrid(np.linspace(normstart[0],normstart[0]+normsize[0],self.crop_size[0]/self.stride),
-                           np.linspace(normstart[1],normstart[1]+normsize[1],self.crop_size[1]/self.stride),
-                           np.linspace(normstart[2],normstart[2]+normsize[2],self.crop_size[2]/self.stride),indexing ='ij')
+        xx,yy,zz = np.meshgrid(
+                        np.linspace(normstart[0],normstart[0]+normsize[0],int(self.crop_size[0]/self.stride)),
+                           np.linspace(normstart[1],normstart[1]+normsize[1],int(self.crop_size[1]/self.stride)),
+                           np.linspace(normstart[2],normstart[2]+normsize[2],int(self.crop_size[2]/self.stride)),indexing ='ij')
         coord = np.concatenate([xx[np.newaxis,...], yy[np.newaxis,...],zz[np.newaxis,:]],0).astype('float32')
 
         pad = []
@@ -274,11 +277,11 @@ class LabelMapping(object):
         output_size = []
         for i in range(3):
             if input_size[i] % stride != 0:
-                print filename
+                print(filename)
             # assert(input_size[i] % stride == 0) 
             output_size.append(input_size[i] / stride)
         
-        label = -1 * np.ones(output_size + [len(anchors), 5], np.float32)
+        label = -1 * np.ones([int(x) for x in output_size] + [len(anchors), 5], np.float32)
         offset = ((stride.astype('float')) - 1) / 2
         oz = np.arange(offset, offset + stride * (output_size[0] - 1) + 1, stride)
         oh = np.arange(offset, offset + stride * (output_size[1] - 1) + 1, stride)
@@ -399,7 +402,8 @@ def collate(batch):
         return batch
     elif isinstance(batch[0], int):
         return torch.LongTensor(batch)
-    elif isinstance(batch[0], collections.Iterable):
+    # elif isinstance(batch[0], collections.Iterable):
+    elif isinstance(batch[0], Iterable):
         transposed = zip(*batch)
         return [collate(samples) for samples in transposed]
 

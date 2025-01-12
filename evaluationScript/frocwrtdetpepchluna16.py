@@ -9,12 +9,23 @@ from multiprocessing import Pool
 import functools
 import SimpleITK as sitk
 fold = 9
-annotations_filename = # path for ground truth annotations for the fold
-annotations_excluded_filename = # path for excluded annotations for the fold
-seriesuids_filename = # path for seriesuid for the fold
-results_path = #val' #val' ft96'+'/val'#
-sideinfopath = '/media/data1/wentao/tianchi/luna16/preprocess/lunaall/'#subset'+str(fold)+'/'  +str(fold)
-datapath = '/media/data1/wentao/tianchi/luna16/lunaall/'#subset'+str(fold)+'/'
+# annotations_filename = # path for ground truth annotations for the fold
+# annotations_excluded_filename = # path for excluded annotations for the fold
+# seriesuids_filename = # path for seriesuid for the fold
+# results_path = #val' #val' ft96'+'/val'#
+# sideinfopath = '/media/data1/wentao/tianchi/luna16/preprocess/lunaall/'#subset'+str(fold)+'/'  +str(fold)
+# datapath = '/media/data1/wentao/tianchi/luna16/lunaall/'#subset'+str(fold)+'/'
+
+
+annotations_filename = "H:/Luna16_Data/DeepLung/preprocess/subset9/annotations9.csv"# path for ground truth annotations for the fold""
+annotations_excluded_filename = "C:/Users/lized/PycharmProjects/DeepLung/evaluationScript/annotations/annotations_excluded.csv" # path for excluded annotations for the fold
+seriesuids_filename = "H:/Luna16_Data/DeepLung/preprocess/subset9/seriesids9.csv" # path for seriesuid for the fold
+results_path = "C:/Users/lized/PycharmProjects/DeepLung/detector/results/res18/retrft969" #val' #val' ft96'+'/val'#
+sideinfopath = "H:/Luna16_Data/DeepLung/preprocess/subset9"
+#'/media/data1/wentao/tianchi/luna16/preprocess/lunaall/'#subset'+str(fold)+'/'  +str(fold)
+datapath = "H:/Luna16_Data/Extracted/luna/subset9/"
+    #/media/data1/wentao/tianchi/luna16/lunaall/'#subset'+str(fold)+'/'
+
 
 maxeps = 150 #03 #150 #100#100
 eps = range(1, maxeps+1, 1)#6,7,1)#5,151,5)#5,151,5)#76,77,1)#40,41,1)#76,77,1)#1,101,1)#17,18,1)#38,39,1)#1, maxeps+1, 1) #maxeps+1, 1)
@@ -109,7 +120,7 @@ def convertcsv(bboxfname, bboxpath, detp):
     pos = VoxelToWorldCoord(pbb[:, 1:], origin, spacing)
     rowlist = []
     # print pos.shape
-    for nk in xrange(pos.shape[0]): # pos[nk, 2], pos[nk, 1], pos[nk, 0]
+    for nk in range(pos.shape[0]): # pos[nk, 2], pos[nk, 1], pos[nk, 0]
         rowlist.append([bboxfname[:-8], pos[nk, 2], pos[nk, 1], pos[nk, 0], 1/(1+np.exp(-pbb[nk,0]))])
     # print len(rowlist), len(rowlist[0])
     return rowlist#bboxfname[:-8], pos[:K, 2], pos[:K, 1], pos[:K, 0], 1/(1+np.exp(-pbb[:K,0]))
@@ -118,9 +129,9 @@ def getfrocvalue(results_filename):
 p = Pool(nprocess)
 def getcsv(detp, eps):
     for ep in eps:
-    	bboxpath = results_path + str(ep) + '/'
+        bboxpath = results_path + str(ep) + '/'
         for detpthresh in detp:
-            print 'ep', ep, 'detp', detpthresh
+            print('ep', ep, 'detp', detpthresh)
             f = open(bboxpath + 'predanno'+ str(detpthresh) + 'd3.csv', 'w')
             fwriter = csv.writer(f)
             fwriter.writerow(firstline)
@@ -146,7 +157,7 @@ def getfroc(detp, eps):
     maxfroc = 0
     maxep = 0
     for ep in eps:
-    	bboxpath = results_path + str(ep) + '/'
+        bboxpath = results_path + str(ep) + '/'
         predannofnamalist = []
         for detpthresh in detp:
             predannofnamalist.append(bboxpath + 'predanno'+ str(detpthresh) + '.csv')
@@ -154,13 +165,13 @@ def getfroc(detp, eps):
         if maxfroc < max(froclist):
             maxep = ep
             maxfroc = max(froclist)
-        print froclist
+        print(froclist)
         for detpthresh in detp:
             # print len(froclist), int((detpthresh-detp[0])/(detp[1]-detp[0]))
             frocarr[(ep-eps[0])/(eps[1]-eps[0]), int((detpthresh-detp[0])/(detp[1]-detp[0]))] = \
                 froclist[int((detpthresh-detp[0])/(detp[1]-detp[0]))]
-            print 'ep', ep, 'detp', detpthresh, froclist[int((detpthresh-detp[0])/(detp[1]-detp[0]))]
-    print maxfroc, maxep
+            print('ep', ep, 'detp', detpthresh, froclist[int((detpthresh-detp[0])/(detp[1]-detp[0]))])
+    print(maxfroc, maxep)
 getfroc(detp, eps)
 p.close()
 fig = plt.imshow(frocarr.T)
@@ -176,9 +187,9 @@ plt.savefig(results_path+'frocavg.png')
 np.save(results_path+'frocavg.npy', frocarr)
 frocarr = np.load(results_path+'frocavg.npy', 'r')
 froc, x, y = 0, 0, 0
-for i in xrange(frocarr.shape[0]):
-    for j in xrange(frocarr.shape[1]):
+for i in range(frocarr.shape[0]):
+    for j in range(frocarr.shape[1]):
         if froc < frocarr[i,j]:
             froc, x, y = frocarr[i,j], i, j
-print fold, froc, x, y
+print(fold, froc, x, y)
 # print maxfroc

@@ -1,5 +1,33 @@
 # DeepLung:
 
+## Zeding Edit:
+## Start with some basic intro of methodlogies and knowledge to understand the code better
+## What is 10-Fold Cross-Validation?
+### Splitting the Data:
+
+The dataset is divided into 10 equal parts, or "folds."
+Each fold contains approximately the same number of samples.
+### Training and Testing:
+
+For each iteration, the model is trained on 9 folds and tested on the remaining 1 fold.
+This process is repeated 10 times, with each fold being used as the test set exactly once.
+### Performance Aggregation:
+
+The model’s performance metrics (e.g., accuracy, precision, recall) are calculated for each fold.
+The final result is the average performance across all 10 folds.
+
+## Follow the below steps to run training and evaluation
+1. Update config_training.py (for preprocessing), this config is only for data preprocessing, prepare.py
+2. Update config_training9.py (for training), this config is for training and testing, need to updated according to 10-fold validation. If 10-folder validatin is needed, then we need to create 10 config file with different setting and repeat the entire training and testing process 10 times
+2. Run data preprocessing: prepare.py, this steps only needs to be run one time, it performs data preprocessing based on the LUNA16 data.
+3. Train the model: python main.py --model res18 -b 8 --resume 064.ckpt --save-dir res18/retrft969/ --epochs 150 --config config_training9, Model is trained on top of a pretrained model called 064.ckpt, which is based on another dataset(maybe tianchi). The model training is resumed from the pretrained model to increase the model performance. We can train from scratch based on LUNA16 by setting resume to empty. The performance may be worse. The training step will generate X number of models corresponding to Epoch#, saved under detector/results/modelname/... 
+4. Test the model: run run_training.py This step will generate lbb(Ground Truth Bounding Boxes) and pbb(Predicted Bounding Boxes), which will be used to calculate FROC
+5. Generate FROC result: run froc_step1.py
+6. Generate FROC result: run froc_step2.py
+
+
+
+
 Please add paper into reference if the repository is helpful to you.
 
 Zhu, Wentao, Chaochun Liu, Wei Fan, and Xiaohui Xie. "DeepLung: Deep 3D Dual Path Nets for Automated Pulmonary Nodule Detection and Classification." IEEE WACV, 2018.

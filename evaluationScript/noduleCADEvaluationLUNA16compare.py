@@ -13,7 +13,7 @@ from NoduleFinding import NoduleFinding
 from tools import csvTools
 # matplotlib.rc('xtick', labelsize=18) 
 # matplotlib.rc('ytick', labelsize=18) 
-font = {'family' : 'normal',
+font = {'family' : 'Arial',
         'size'   : 17}
 
 matplotlib.rc('font', **font)
@@ -154,13 +154,15 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
     @param CADSystemName: name of the CAD system, to be used in filenames and on FROC curve
     '''
     if vis:
-        nodOutputfile = open(os.path.join(outputDir,'CADAnalysis.txt'),'w')
+        print("vis")
+        nodOutputfile = open(os.path.join(outputDir, 'files/CADAnalysis.txt'), 'w')
         nodOutputfile.write("\n")
         nodOutputfile.write((60 * "*") + "\n")
         nodOutputfile.write("CAD Analysis: %s\n" % CADSystemName)
         nodOutputfile.write((60 * "*") + "\n")
         nodOutputfile.write("\n")
-    results = csvTools.readCSV(results_filename, delimiter=delimiter)
+    # results = csvTools.readCSV(results_filename, delimiter=delimiter)
+    results = csvTools.readCSV(results_filename)
     print(results_filename)
     allCandsCAD = {}
     for seriesuid in seriesUIDs:
@@ -187,13 +189,13 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
             if len(nodules.keys()) > maxNumberOfCADMarks:
                 # make a list of all probabilities
                 probs = []
-                for keytemp, noduletemp in nodules.iteritems():
+                for keytemp, noduletemp in nodules.items():
                     probs.append(float(noduletemp.CADprobability))
                 probs.sort(reverse=True) # sort from large to small
                 probThreshold = probs[maxNumberOfCADMarks]
                 nodules2 = {}
                 nrNodules2 = 0
-                for keytemp, noduletemp in nodules.iteritems():
+                for keytemp, noduletemp in nodules.items():
                     if nrNodules2 >= maxNumberOfCADMarks:
                         break
                     if float(noduletemp.CADprobability) > probThreshold:
@@ -260,7 +262,7 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
             radiusSquared = pow((diameter / 2.0), 2.0)
             found = False
             noduleMatches = []
-            for key, candidate in candidates.iteritems():
+            for key, candidate in candidates.items():
                 x2 = float(candidate.coordX)
                 y2 = float(candidate.coordY)
                 z2 = float(candidate.coordZ)
@@ -271,7 +273,7 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
                         found = True
                         noduleMatches.append(candidate)
                         if key not in candidates2.keys() and vis:
-                            print "This is strange: CAD mark %s detected two nodules! Check for overlapping nodule annotations, SeriesUID: %s, nodule Annot ID: %s" % (str(candidate.id), seriesuid, str(noduleAnnot.id))
+                            print("This is strange: CAD mark %s detected two nodules! Check for overlapping nodule annotations, SeriesUID: %s, nodule Annot ID: %s" % (str(candidate.id), seriesuid, str(noduleAnnot.id)))
                         else:
                             del candidates2[key]
                     elif (noduleAnnot.state == "Excluded"): # an excluded nodule
@@ -310,7 +312,7 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
                     FROCtoNoduleMap.append("%s,%s,%s,%s,%s,%.9f,%s,%s" % (seriesuid, noduleAnnot.id, noduleAnnot.coordX, noduleAnnot.coordY, noduleAnnot.coordZ, float(noduleAnnot.diameter_mm), int(-1), "NA"))
                     nodNoCandFile.write("%s,%s,%s,%s,%s,%.9f,%s\n" % (seriesuid, noduleAnnot.id, noduleAnnot.coordX, noduleAnnot.coordY, noduleAnnot.coordZ, float(noduleAnnot.diameter_mm), str(-1)))
         # add all false positives to the vectors
-        for key, candidate3 in candidates2.iteritems():
+        for key, candidate3 in candidates2.items():
             candFPs += 1
             FROCGTList.append(0.0)
             FROCProbList.append(float(candidate3.CADprobability))
@@ -397,13 +399,13 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
             plt.legend(loc='lower right')
             plt.title('FROC - 3D Res18 and DPN26')#%s' % (CADSystemName))
             if bLogPlot:
-                plt.xscale('log', basex=2)
+                plt.xscale('log', base=2)
                 ax.xaxis.set_major_formatter(FixedFormatter([0.125,0.25,0.5,1,2,4,8]))
             # set your ticks manually
             ax.xaxis.set_ticks([0.125,0.25,0.5,1,2,4,8])
             ax.yaxis.set_ticks(np.arange(0.65, 1, 0.1))
             # ax.yaxis.set_ticks(np.arange(0, 1.1, 0.1))
-            plt.grid(b=True, which='both')
+            plt.grid(visible=True, which='both')
             plt.tight_layout()
             plt.savefig(os.path.join(outputDir, "froc_%s.png" % CADSystemName), bbox_inches=0, dpi=300)
     frocv = 0
@@ -412,7 +414,7 @@ def evaluateCAD(seriesUIDs, results_filename, outputDir, allNodules, CADSystemNa
     # print(len(sens_bs_mean))
     for fp, se in zip(fps_itp, sens_itp):# fps_bs_itp sens_bs_mean):
         if fp >= curfp:
-            print se
+            print(se)
             frocv += se
             curfp *= 2
             if curfp == 16:
@@ -523,5 +525,5 @@ if __name__ == '__main__':
     annotations_excluded_filename = '../evaluationScript/annotations/newannotations_excluded.csv' #annotations_excluded.csv'
     seriesuids_filename = '../evaluationScript/annotations/newseriesuids.csv' #seriesuids.csv'
     results_filename = './annotations/dpn26bs32.csv' #3DRes18FasterR-CNN.csv'#3D Faster R-CNN - Res18.csv' #top5.csv'#
-    print noduleCADEvaluation(annotations_filename,annotations_excluded_filename,seriesuids_filename,results_filename,'./', vis=True, delimiter='\t', clr = 'r', cap='3DDPN26FasterR-CNN')
-    print "Finished!"
+    print(noduleCADEvaluation(annotations_filename,annotations_excluded_filename,seriesuids_filename,results_filename,'./', vis=True, delimiter='\t', clr = 'r', cap='3DDPN26FasterR-CNN'))
+    print("Finished!")

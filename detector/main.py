@@ -2,7 +2,7 @@ import argparse
 import os
 import time
 import numpy as np
-import data
+# import data
 from importlib import import_module
 import shutil
 from utils import *
@@ -21,16 +21,16 @@ from torch.autograd import Variable
 from layers import acc
 
 parser = argparse.ArgumentParser(description='PyTorch DataBowl3 Detector')
-parser.add_argument('--model', '-m', metavar='MODEL', default='base',
+parser.add_argument('--model', '-m', metavar='MODEL', default='res18',
                     help='model')
 parser.add_argument('--config', '-c', default='config_training', type=str)
-parser.add_argument('-j', '--workers', default=30, type=int, metavar='N',
-                    help='number of data loading workers (default: 32)')
+parser.add_argument('-j', '--workers', default=6, type=int, metavar='N',
+                    help='number of data loading workers (default: 24)')
 parser.add_argument('--epochs', default=100, type=int, metavar='N',
                     help='number of total epochs to run')
 parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
                     help='manual epoch number (useful on restarts)')
-parser.add_argument('-b', '--batch-size', default=16, type=int,
+parser.add_argument('-b', '--batch-size', default=8, type=int,
                     metavar='N', help='mini-batch size (default: 16)')
 parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,
                     metavar='LR', help='initial learning rate')
@@ -52,7 +52,7 @@ parser.add_argument('--split', default=8, type=int, metavar='SPLIT',
                     help='In the test phase, split the image to 8 parts')
 parser.add_argument('--gpu', default='all', type=str, metavar='N',
                     help='use gpu')
-parser.add_argument('--n_test', default=4, type=int, metavar='N',
+parser.add_argument('--n_test', default=1, type=int, metavar='N',
                     help='number of gpu for test')
 
 def main():
@@ -105,9 +105,9 @@ def main():
     valdatadir = config_training['val_preprocess_result_path']
     testdatadir = config_training['test_preprocess_result_path']
     trainfilelist = []
-    print config_training['train_data_path']
+    print(config_training['train_data_path'])
     for folder in config_training['train_data_path']:
-        print folder
+        print(folder)
         for f in os.listdir(folder):
             if f.endswith('.mhd') and f[:-4] not in config_training['black_list']:
                 trainfilelist.append(folder.split('/')[-2]+'/'+f[:-4])
@@ -149,7 +149,7 @@ def main():
         return
     #net = DataParallel(net)
     import data
-    print len(trainfilelist)
+    print(len(trainfilelist))
     dataset = data.DataBowl3Detector(
         traindatadir,
         trainfilelist,
@@ -215,9 +215,12 @@ def train(data_loader, net, loss, epoch, optimizer, get_lr, save_freq, save_dir)
     metrics = []
 
     for i, (data, target, coord) in enumerate(data_loader):
-        data = Variable(data.cuda(async = True))
-        target = Variable(target.cuda(async = True))
-        coord = Variable(coord.cuda(async = True))
+        data = Variable(data.cuda(non_blocking=True))
+        target = Variable(target.cuda(non_blocking=True))
+        coord = Variable(coord.cuda(non_blocking=True))
+        # data = Variable(data.cuda(async = True))
+        # target = Variable(target.cuda(async = True))
+        # coord = Variable(coord.cuda(async = True))
 
         output = net(data, coord)
         loss_output = loss(output, target)
@@ -225,7 +228,7 @@ def train(data_loader, net, loss, epoch, optimizer, get_lr, save_freq, save_dir)
         loss_output[0].backward()
         optimizer.step()
 
-        loss_output[0] = loss_output[0].data[0]
+        loss_output[0] = loss_output[0].item()
         metrics.append(loss_output)
 
     if epoch % args.save_freq == 0:            
@@ -242,7 +245,12 @@ def train(data_loader, net, loss, epoch, optimizer, get_lr, save_freq, save_dir)
 
     end_time = time.time()
 
-    metrics = np.asarray(metrics, np.float32)
+    # metrics = np.asarray(metrics.cpu(), np.float32)
+    # metrics = np.asarray([m.cpu().numpy() for m in metrics], np.float32)
+    if isinstance(metrics, list):
+        # Convert the list to a tensor if necessary
+        metrics = torch.tensor(metrics)
+    metrics = np.asarray(metrics.cpu(), np.float32)
     print('Epoch %03d (lr %.5f)' % (epoch, lr))
     print('Train:      tpr %3.2f, tnr %3.2f, total pos %d, total neg %d, time %3.2f' % (
         100.0 * np.sum(metrics[:, 6]) / np.sum(metrics[:, 7]),
@@ -257,7 +265,6 @@ def train(data_loader, net, loss, epoch, optimizer, get_lr, save_freq, save_dir)
         np.mean(metrics[:, 3]),
         np.mean(metrics[:, 4]),
         np.mean(metrics[:, 5])))
-    print
 
 def validate(data_loader, net, loss):
     start_time = time.time()
@@ -266,18 +273,26 @@ def validate(data_loader, net, loss):
 
     metrics = []
     for i, (data, target, coord) in enumerate(data_loader):
-        data = Variable(data.cuda(async = True), volatile = True)
-        target = Variable(target.cuda(async = True), volatile = True)
-        coord = Variable(coord.cuda(async = True), volatile = True)
+        data = Variable(data.cuda(non_blocking=True))
+        target = Variable(target.cuda(non_blocking=True))
+        coord = Variable(coord.cuda(non_blocking=True))
+        # data = Variable(data.cuda(async = True), volatile = True)
+        # target = Variable(target.cuda(async = True), volatile = True)
+        # coord = Variable(coord.cuda(async = True), volatile = True)
 
         output = net(data, coord)
         loss_output = loss(output, target, train = False)
 
-        loss_output[0] = loss_output[0].data[0]
+        loss_output[0] = loss_output[0].item()
         metrics.append(loss_output)    
     end_time = time.time()
 
-    metrics = np.asarray(metrics, np.float32)
+    # metrics = np.asarray(metrics, np.float32)
+    if isinstance(metrics, list):
+        # Convert the list to a tensor if necessary
+        metrics = torch.tensor(metrics)
+    metrics = np.asarray(metrics.cpu(), np.float32)
+    # metrics = np.asarray([m.cpu().numpy() for m in metrics], np.float32)
     print('Validation: tpr %3.2f, tnr %3.8f, total pos %d, total neg %d, time %3.2f' % (
         100.0 * np.sum(metrics[:, 6]) / np.sum(metrics[:, 7]),
         100.0 * np.sum(metrics[:, 8]) / np.sum(metrics[:, 9]),
@@ -324,8 +339,11 @@ def test(data_loader, net, get_pbb, save_dir, config):
         featurelist = []
 
         for i in range(len(splitlist)-1):
-            input = Variable(data[splitlist[i]:splitlist[i+1]], volatile = True).cuda()
-            inputcoord = Variable(coord[splitlist[i]:splitlist[i+1]], volatile = True).cuda()
+            # input = Variable(data[splitlist[i]:splitlist[i+1]], volatile = True).cuda()
+            # inputcoord = Variable(coord[splitlist[i]:splitlist[i+1]], volatile = True).cuda()
+            with torch.no_grad():
+                input = Variable(data[splitlist[i]:splitlist[i + 1]]).cuda()
+                inputcoord = Variable(coord[splitlist[i]:splitlist[i + 1]]).cuda()
             if isfeat:
                 output,feature = net(input,inputcoord)
                 featurelist.append(feature.data.cpu().numpy())
@@ -339,7 +357,7 @@ def test(data_loader, net, get_pbb, save_dir, config):
             feature = split_comber.combine(feature,sidelen)[...,0]
 
         thresh = args.testthresh # -8 #-3
-        print 'pbb thresh', thresh
+        print('pbb thresh', thresh)
         pbb,mask = get_pbb(output,thresh,ismask=True)
         if isfeat:
             feature_selected = feature[mask[0],mask[1],mask[2]]
@@ -362,7 +380,8 @@ def singletest(data,net,config,splitfun,combinefun,n_per_run,margin = 64,isfeat=
     z, h, w = data.size(2), data.size(3), data.size(4)
     print(data.size())
     data = splitfun(data,config['max_stride'],margin)
-    data = Variable(data.cuda(async = True), volatile = True,requires_grad=False)
+    # data = Variable(data.cuda(async = True), volatile = True,requires_grad=False)
+    data = Variable(data.cuda(non_blocking=True), volatile = True, requires_grad = False)
     splitlist = range(0,args.split+1,n_per_run)
     outputlist = []
     featurelist = []
