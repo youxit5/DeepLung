@@ -24,6 +24,7 @@ The final result is the average performance across all 10 folds.
 4. Test the model: run run_training.py This step will generate lbb(Ground Truth Bounding Boxes) and pbb(Predicted Bounding Boxes), which will be used to calculate FROC
 5. Generate FROC result: run froc_step1.py
 6. Generate FROC result: run froc_step2.py
+7. Generate FROC result: run froc_step2.1.py
 
 
 
